@@ -1,7 +1,7 @@
-Sports Analytics Project
+# Sports Analytics Project
 This repository contains the code and documentation for a sports analytics project focusing on predicting player wages and analyzing the factors that significantly impact a player’s overall rating. This project was developed as part of the ALY6015: Intermediate Analytics course at Northeastern University.
 
-Table of Contents
+# Table of Contents
 Introduction
 Project Goals
 Data
@@ -12,10 +12,10 @@ Installation
 Usage
 Contributing
 License
-Introduction
+# Introduction
 In this project, our primary focus is on sports analytics specifically in the context of predicting player wages and analyzing the factors that significantly impact a player’s overall rating. By understanding these aspects, we can gain valuable insights into player valuation and performance evaluation in the sports industry.
 
-Project Goals
+# Project Goals
 Predicting a Player’s Wage
 Develop a predictive model that can estimate a player’s wage using their attributes and personal data.
 Analyzing Factors Impacting Player’s Overall Rating
@@ -23,7 +23,7 @@ Identify the factors that have the most significant influence on a player’s ov
 Data
 The data used in this project includes player attributes such as age, overall rating, market value, nationality, position, and other relevant information. The dataset was preprocessed to handle missing values and to select relevant variables for analysis.
 
-Methods
+# Methods
 Predicting Player’s Wage
 Model: Ridge Regression
 Evaluation Metrics:
@@ -47,10 +47,10 @@ Best Model Performance:
 MSE: 9.958295
 RMSE: 3.16
 R-squared: 0.779
-Conclusion
+# Conclusion
 The project successfully developed models to predict player wages and analyze factors impacting overall player ratings. The Ridge Regression model provided a robust prediction of player wages, while the GLM effectively identified key factors influencing player ratings.
 
-Installation
+# Installation
 To run the code in this repository, you need to have the following dependencies installed:
 
 Python 3.8+
