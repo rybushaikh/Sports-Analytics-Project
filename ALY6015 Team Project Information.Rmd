@@ -1,0 +1,480 @@
+---
+title: ''
+output:
+  html_document: 
+   always_allow_html: true
+  word_document: default
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+<P>
+
+<BR>
+
+<CENTER><FONT SIZE = 5, COLOR = "#008000"> <B>ALY6015: Intermediate
+Analytics</B> <BR><B>Northeastern University</B> <BR>
+<FONT SIZE = 4, COLOR = #008000><B> VLADIMIR SHAPIRO </B></FONT>
+<BR><BR> Team Project: Draft Report<BR> </FONT></CENTER>
+
+<BR> <FONT SIZE = 4, COLOR = #E74C3C><B> INTRODUCTION </B></FONT>
+
+<p>
+
+In this project, our primary focus is on sports analytics, specifically
+in the context of predicting player wages and analyzing the factors that
+significantly impact a player's overall rating. By understanding these
+aspects, we can gain valuable insights into player valuation and
+performance evaluation in the sports industry.
+
+Q1: Predicting a player's wage based on their attributes and personal
+data To answer this question, we aim to develop a predictive model that
+can estimate a player's wage using their attributes and personal data.
+The attributes may include factors such as age, overall rating, market
+value, nationality, position, and other relevant information. M1: Our
+chosen method for this analysis is Ridge Regression. Ridge Regression is
+a suitable technique as it addresses the issue of overfitting by adding
+a penalty term to the loss function. By incorporating the attributes
+into the model, we can train it to accurately predict a player's wage.
+The dataset will be divided into training and testing sets, and
+cross-validation techniques will be applied to optimize the model's
+performance. Tuning the regularization parameter (alpha) will help
+strike a balance between bias and variance, resulting in a more robust
+and accurate wage prediction model.
+
+Q2: Analyzing factors that have the most significant impact on a
+player's overall rating To answer this question, we aim to identify the
+factors that have the most significant influence on a player's overall
+rating. This analysis will help us understand the key contributors to a
+player's performance evaluation. M1: For this task, we will employ the
+Generalized Linear Model (GLM) analysis. GLM allows us to analyze the
+relationship between a player's overall rating and various factors,
+including age, nationality, position, and specific attributes like pace,
+shooting, passing, and more. By examining these factors and their
+coefficients, we can determine the relative importance and significance
+of each factor in determining a player's overall rating.
+
+Through these analyses, we can provide valuable insights to sports
+organizations, agents, and talent scouts, enabling them to make informed
+decisions regarding player wages and performance evaluation.
+
+</p>
+
+```{r Libraries, echo=FALSE, include=FALSE }
+# Load required libraries
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(corrplot)
+library(readr)
+library(tidyverse)
+library(knitr)
+library(caret)
+library(glmnet)
+library(kableExtra)
+library(ggcorrplot)
+library(corrplot)
+library(GGally)
+install.packages("fastmap")
+
+```
+
+***ANALYSIS***
+
+***Exploratory Data Analysis (EDA)***
+
+```{r warning=FALSE,message=FALSE}
+#Import the data
+players_22 <- read_csv("C:/Users/Raheb/Desktop/UNI/players_22.csv")
+```
+
+```{r}
+# Specify the variables we want to keep
+selected_vars <- c("wage_eur", "age", "short_name", "value_eur","overall","nationality_name","player_positions","shooting")
+
+# Create a new dataset with only the selected variables
+selected_data <- players_22[, selected_vars]
+
+# Remove rows with any missing values
+data_complete <- na.omit(selected_data)
+```
+
+```{r}
+sorted_table <- data_complete %>%
+  arrange(desc(wage_eur))
+sorted_table %>%
+  kbl(caption = "Table1.Summary of the players with their attributes") %>%
+  kable_classic(full_width = F, html_font = "Cambria")%>%
+     scroll_box(height = "300px")
+
+summary(data_complete)
+```
+
+<br><b>Obsversations:</b>
+
+<p>
+
+The table titled "Summary of the players with their attributes" provides
+valuable insights into the attributes of various players. The wage
+distribution among the players showcases a range from 270,000 EUR to
+350,000 EUR, reflecting the diversity in their earnings. Additionally,
+the age of the players spans from 26 to 36 years old, indicating a mix
+of experienced and relatively younger individuals. Notable names in the
+table include K. De Bruyne, K. Benzema, L. Messi, Casemiro, T. Kroos, R.
+Sterling, R. Lewandowski, Cristiano Ronaldo, Neymar Jr, and S. Mané,
+each contributing their unique skills and abilities to their respective
+teams. The market value, represented by the "value_eur" column,
+showcases a range from 45,000,000 EUR to 129,000,000 EUR, indicating the
+perceived worth of these players in the market. The overall rating
+column provides an insight into their overall performance, with ratings
+ranging from 88 to 93, highlighting their exceptional capabilities.
+Moreover, the players hail from various nationalities, including
+Belgium, France, Argentina, Brazil, Germany, England, Poland, and
+Portugal, showcasing the global diversity of talent.
+
+The "player_positions" column illustrates the diverse roles and
+positions these players occupy on the field. These positions include CM,
+CAM, CF, ST, RW, LW, CDM, and CAM, demonstrating their versatility and
+adaptability. Finally, the "shooting" attribute values range from 73 to
+94, suggesting varying levels of expertise in their shooting abilities..
+
+</p>
+
+```{r}
+
+# Set up a nice plot layout
+par(mar = c(5, 4, 4, 6))  # Adjust margin size
+
+# Create a scatter plot of Wage vs. Age
+plot(data_complete$age, data_complete$wage_eur, 
+     xlab = "Age", ylab = "Wage (EUR)", main = "Figure1. Relationship between age and wage",
+     col = "red", pch = 16)
+legend("topright", legend = c("Outliers"), pch = 20, col = "red", pt.cex = 1.2, bty = "n")
+```
+
+<br><b>Obsersations:</b>
+
+<p>The scatter plot of Wage vs. Age reveals a general trend where player
+wages tend to be higher during their late twenties and early thirties.
+However, as players enter their mid-thirties, there is a slight decrease
+in wages. The plot also includes outliers representing exceptional cases
+where players earn significantly higher or lower wages compared to their
+age group.</p>
+
+***Goal (Business Question) #1: Predicting a player's wage based on
+their attributes and personal data.***
+
+<p>
+
+Motivation: The prediction of player wages is crucial for sports
+organizations, agents, and talent scouts when negotiating contracts and
+making financial decisions. By accurately estimating a player's wage
+based on their attributes and personal data, stakeholders can make
+informed decisions and ensure fair compensation.
+
+Research and Development: To tackle this business question, we will
+leverage a machine learning approach called Ridge Regression. Ridge
+Regression is suitable for predicting a player's wage as it addresses
+the issue of overfitting by introducing a penalty term to the loss
+function. This regularization technique helps in achieving a more robust
+and accurate model.
+
+```{r}
+
+# Select only the numeric variables
+numeric_vars <- c("wage_eur", "age", "value_eur", "overall")
+numeric_data <- data_complete[, numeric_vars]
+
+
+
+# Print the correlation matrix
+cor_plot <- ggcorr(numeric_data,
+    nbreaks = 6,
+    label = TRUE,
+    label_size = 3,
+    color = "grey50")
+
+cor_plot <- cor_plot + labs(caption = "Figure2.Correlation Matrix Plot")
+print(cor_plot)
+```
+
+<br>The development process involves the following steps:
+
+</p>
+
+```{r}
+   
+# Split the dataset into training and testing sets
+set.seed(123) # Set a seed for reproducibility
+trainIndex <- createDataPartition(data_complete$wage_eur, p = 0.7, list = FALSE)
+trainData <- data_complete[trainIndex, ]
+testData <- data_complete[-trainIndex, ]
+
+# Perform Ridge Regression
+model <- glmnet(x = as.matrix(trainData[, c("age", "overall", "value_eur")]),
+                y = trainData$wage_eur,
+                alpha = 0, # Ridge Regression
+                standardize = TRUE)
+
+# Choose the optimal lambda value using cross-validation
+cvModel <- cv.glmnet(x = as.matrix(trainData[, c("age", "overall", "value_eur")]),
+                     y = trainData$wage_eur,
+                     alpha = 0, # Ridge Regression
+                     standardize = TRUE)
+
+# Retrieve the optimal lambda value
+optimalLambda <- cvModel$lambda.min
+
+# Train the final model using the optimal lambda value
+finalModel <- glmnet(x = as.matrix(trainData[, c("age", "overall", "value_eur")]),
+                     y = trainData$wage_eur,
+                     alpha = 0, # Ridge Regression
+                     standardize = TRUE,
+                     lambda = optimalLambda)
+
+# Make predictions on the testing set
+predictions <- predict(finalModel, newx = as.matrix(testData[, c("age", "overall", "value_eur")]), s = optimalLambda)
+
+# Model Evaluation
+mse <- mean((predictions - testData$wage_eur)^2)
+rmse <- sqrt(mse)
+r_squared <- cor(predictions, testData$wage_eur)^2
+
+
+
+# Create a table for evaluation metrics
+evaluation_table <- data.frame(
+  Metric = c("Mean Squared Error (MSE)", "Root Mean Squared Error (RMSE)", "R-squared"),
+  Value = c(mse, rmse, r_squared)
+)
+# Format the table using kable
+table_formatted <- kable(evaluation_table, align = "c", caption = "Table 2.Model Evaluation Metrics") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+table_formatted
+```
+
+<b>Obsversations</b>
+
+<p>
+
+The output provided represents the evaluation metrics for the Ridge
+Regression model used to predict player wages based on their attributes
+and personal data.
+
+1.  Mean Squared Error (MSE): `r mse`
+    -   MSE is a measure of the average squared difference between the
+        predicted and actual wage values. In this case, the MSE value of
+        94985789 suggests that, on average, the squared difference
+        between the predicted and actual wages is quite large. A lower
+        MSE indicates better model performance.
+2.  Root Mean Squared Error (RMSE): `r round(rmse,3)`
+    -   RMSE is the square root of the MSE and provides a measure of the
+        average difference between the predicted and actual wage values.
+        In this case, the RMSE value of 9746.065 indicates that, on
+        average, the predicted wage values deviate by approximately
+        \$9746.065 from the actual wage values. A lower RMSE indicates
+        better model performance.
+3.  R-squared: `r round(r_squared,3)`
+    -   R-squared, also known as the coefficient of determination,
+        measures the proportion of the variance in the dependent
+        variable (wage) that can be explained by the independent
+        variables (attributes and personal data). In this case, the
+        R-squared value of 0.7291393 indicates that approximately 72.9%
+        of the variance in the player wages can be explained by the
+        model. A higher R-squared value suggests better predictive
+        power.
+
+Overall, the evaluation metrics provide insights into the performance of
+the Ridge Regression model. While the model explains a significant
+portion of the wage variance (as indicated by the R-squared value),
+there is room for improvement, as evidenced by the relatively high MSE
+and RMSE values. Fine-tuning the model or considering additional
+variables may help enhance its performance.
+
+</p>
+
+***Goal (Business Question) #2: Analyzing factors that have the most
+significant impact on a player's overall rating.*** Q2: Analyzing
+factors that have the most significant impact on a player's overall
+rating To answer this question, we aim to identify the factors that have
+the most significant influence on a player's overall rating. This
+analysis will help us understand the key contributors to a player's
+performance evaluation. M1: For this task, we will employ the
+Generalized Linear Model (GLM) analysis. GLM allows us to analyze the
+relationship between a player's overall rating and various factors,
+including age, nationality, position, and specific attributes like pace,
+shooting, passing, and more. By examining these factors and their
+coefficients, we can determine the relative importance and significance
+of each factor in determining a player's overall rate
+
+<p>
+
+Motivation: Player's overall rating is the most intuitive display of
+player's performance. According to the player's performance score, it
+can be clearly concluded that the overall level of each player has
+changed and which players have more comprehensive skills. In addition,
+the player's performance score helps fans and clubs assess the player's
+status and value.
+
+Research and Development: To tackle this business question, we will
+leverage feature selection method to determine an optimal model.
+Generalized Linear Model (GLM) analysis is suitable for analyze the
+relationship between a player's overall rating and various factors as it
+determine the extent to which each of these factors contributes to the
+player's overall rating. The stepwise selection method is considered to
+be used to get the variables effectively.
+
+```{r}
+# Select variables
+selected_vars2 <- c("overall","age", "skill_moves", "international_reputation", 
+                   "pace", "shooting", "passing", 
+                   "dribbling", "defending", "physic")
+
+# Subset dataframe based on selected_vars
+df_selected2 <- players_22[, selected_vars2]
+
+# Remove rows with NA values
+vars_selected2 <- na.omit(df_selected2)
+
+
+# Print the correlation matrix
+cor_plot2 <- ggcorr(vars_selected2,
+    nbreaks = 6,
+    label = TRUE,
+    label_size = 3,
+    color = "grey50")
+
+cor_plot21 <- cor_plot2 + labs(caption = "Figure3.Correlation Matrix Plot")
+print(cor_plot21)
+```
+
+<br>The development process involves the following steps:
+
+</p>
+
+```{r}
+# Split the dataset into training and testing sets
+set.seed(123) 
+trainIndex2 <- createDataPartition(vars_selected2$overall, p = 0.7, list = FALSE)
+trainData2 <- vars_selected2[ trainIndex2, ]
+testData2 <- vars_selected2[-trainIndex2, ]
+
+# perform generalized linear model 
+full_model <- glm(overall ~ age + skill_moves + international_reputation + pace + shooting + passing + dribbling + defending + physic, data = trainData2, family = gaussian())
+summary(full_model)
+
+# Perform stepwise regression
+step_model <- glm(overall~., data = trainData2) %>% stats::step(direction = "both") 
+summary(step_model)
+
+# Predict on the test data using the final model
+predictions2 <- predict(step_model, newdata = testData2)
+
+
+# Model Evaluation
+mse2 <- mean((testData2$overall - predictions2)^2)
+rmse2 <- sqrt(mse2)
+r_squared2 <- cor(predictions2, testData2$overall)^2
+
+# Create a table for evaluation metrics
+evaluation_table2 <- data.frame(
+  Metric = c("Mean Squared Error (MSE)", "Root Mean Squared Error (RMSE)", "R-squared"),
+  Value = c(mse2, rmse2, r_squared2)
+)
+# Format the table using kable
+table_formatted2 <- kable(evaluation_table2, align = "c", caption = "Table 3.Model Evaluation Metrics") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+table_formatted2
+```
+
+<b>Obsversations</b>
+
+<p>
+
+The output provided represents the evaluation metrics for the
+generalized linear model used to predict players' overall score based on
+their attributes and personal data.
+
+1.  Mean Squared Error (MSE): `r mse2`
+    -   The MSE is 9.958295, which implies there is a certain level of
+        error in the predictions, although without a benchmark model for
+        comparison, it's hard to assess whether this is high or low.
+2.  Root Mean Squared Error (RMSE): `r round(rmse2,2)`
+    -   The RMSE is 3.16 which means that on average, the prediction of
+        the model is about 3.16 scores away from the actual values.
+3.  R-squared: `r round(r_squared2,3)`
+    -   An R-squared of 0.779 indicate that the model has a relatively
+        high explanatory power. An R-squared of 0.779 means that about
+        77.9% of the variability in the player's overall score can be
+        explained by the features in the model.
+
+Overall, the use of generalized linear model and stepwise model shows
+that all selected variables are suitable to predict players' overall
+score. According to the R-squared value, the prediction model is
+convincible. From the RMSE, the results of the prediction is accurate.
+It can be speculated that add additional variables might enhance the
+model's performance.
+
+</p>
+
+<BR> <FONT SIZE = 4, COLOR = #E74C3C><B> CONCLUSION </B></FONT>
+
+<p>
+
+We concentrated on sports analytics in this research, particularly on
+estimating player salaries and examining the elements that have a major
+influence on a player's overall rating. We wanted to give useful
+insights into player value and performance evaluation in the sports
+market by comprehending these factors.
+
+We used Ridge Regression to answer the first question, which involved
+estimating a player's pay based on their characteristics and personal
+information. To calculate a player's pay, the algorithm factored in
+characteristics including age, overall rating, market worth, country,
+and position. With space for improvement in terms of MSE and RMSE, the
+assessment metrics showed that the model explained around 72.9% of the
+variance in player earnings. The performance of the model may be
+improved by adjusting it or by taking new factors into account. Proper
+wage forecasting is crucial for sports organizations, agents, and talent
+scouts to make informed decisions and ensure fair compensation.
+
+We used the Generalized Linear Model (GLM) analysis for the second
+question, which involved examining the variables that affected a
+player's total rating. We established the proportionate weighting of
+each aspect in creating a player's total rating by looking at elements
+including age, nationality, position, and characteristics like pace,
+shooting, and passing. The assessment metrics showed that the GLM model
+has a strong explanatory power by explaining roughly 77.9% of the
+variation in players' total scores. For the purpose of determining a
+player's position and value, it is crucial to comprehend the major
+factors that influence performance appraisal.
+
+We have successfully answered these inquiries, giving talent scouts,
+agents, and sports organizations insightful information. Fair salary
+discussions are made possible by accurate wage forecast, and player
+assessment and performance analysis are aided by knowledge of the
+variables that affect total ratings.
+
+</p>
+
+<BR> <FONT SIZE = 4, COLOR = #E74C3C><B> REFERENCES </B></FONT>
+
+<p>
+
+1.  sonbarsonbar                    2111 silver badge22 bronze badges,
+    user12282991user12282991                    4111 silver badge22
+    bronze badges, & GanainGanain                    4111 bronze badge.
+    (1965, October 1). *Error in length(obj) : Class name too long in
+    \"length.\"* Stack Overflow.
+    <https://stackoverflow.com/questions/55342788/error-in-lengthobj-class-name-too-long-in-length>
+
+2.  R: Predict method for linear model fits. (n.d.).
+    <https://www.math.ucla.edu/~anderson/rw1001/library/base/html/predict.lm.html>
+
+3.  Johnson, D. (2023, May 27). *Correlation in R: Pearson & Spearman
+    Correlation Matrix*. Guru99.
+    <https://www.guru99.com/r-pearson-spearman-correlation.html>
+
+4.  Singh, D. (2019, November 12). *Deepika Singh*. Pluralsight.
+    <https://www.pluralsight.com/guides/linear-lasso-and-ridge-regression-with-r>
